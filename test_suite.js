@@ -1,15 +1,15 @@
 // The baseline for every test suite on this module
 
-// Generate 1 GB of values before testing
-// Javascript number format is a double-precision 64-bit floating point format (IEEE 754)
-const GENERATE_VALUES_COUNT_PRE_TESTS = Math.ceil(8000000 / 64)
-
 class TestSuite {
   constructor (generator, options) {
     const typeError = new TypeError('A passed random number generator must have a .next() function (or a provided options.next as 2nd argument) that returns a value in [0.0f, 1.0f)')
     const localOptions = options || {}
     this.nextFunction = generator.next || localOptions.next
     this.values = []
+
+    // Generate 10 GB of values before testing
+    // Javascript number format is a double-precision 64-bit floating point format (IEEE 754)
+    const GENERATE_VALUES_COUNT_PRE_TESTS = localOptions.generateValuesCountPreTests || Math.ceil(10 * 8000000 / 64)
 
     if (typeof this.nextFunction !== 'function') {
       throw typeError
@@ -24,13 +24,21 @@ class TestSuite {
     }
 
     this.generator = generator
+    this.test = new Test(this)
+    this.tests = [this.test]
   }
 
-  init () {
-    // Intentionally left blank
+  run () {
+    return this.tests.map(function (test) { return ({ [test.constructor.name]: test.run() }) })
+  }
+}
+
+class Test {
+  constructor (suite) {
+    this.values = suite.values
   }
 
-  test () {
+  run () {
     // Intentionally left blank
     // Every test returns a report object
     return {
@@ -39,5 +47,7 @@ class TestSuite {
     }
   }
 }
+
+TestSuite.Test = Test
 
 module.exports = TestSuite
