@@ -1,21 +1,21 @@
-/* The ENT test suite (references: https://github.com/jj1bdx/ent, http://fourmilab.ch/random/)
- * Every test returns a value between 0.0f and 1.0f to represent likelihood of randomness according to the test's assumptions
- * Local assumptions are explained for every test
- * The tests are remodelled to float values in the [0, 1) range, the output of Math.random()
-*/
 const TestSuite = require('./test_suite')
 const fft = require('fft-js').fft
 const ifft = require('fft-js').ifft
 const CIRCLE_RADIUS = 1.0
 const CIRCLE_RADIUS_SQUARED = CIRCLE_RADIUS * CIRCLE_RADIUS
 
+/* The ENT test suite (references: https://github.com/jj1bdx/ent, http://fourmilab.ch/random/)
+ * Every test returns a value between 0.0f and 1.0f to represent likelihood of randomness according to the test's assumptions
+ * Local assumptions are explained for every test
+ * The tests are remodelled to float values in the [0, 1) range, the output of Math.random()
+*/
 class ENTSuite extends TestSuite {
   constructor (generator, options) {
     super(generator, options)
     this.monteCarlo = new ENTMontecarloTest(this)
     this.average = new ENTAverageTest(this)
     this.serialCorrelation = new ENTSerialCorrelationTest(this)
-    this.tests = [this.monteCarlo, this.average]
+    this.tests = [this.monteCarlo, this.average, this.serialCorrelation]
   }
 }
 
@@ -39,27 +39,32 @@ class ENTMontecarloTest extends TestSuite.Test {
         const xDistance = (x * CIRCLE_RADIUS * 2 - CIRCLE_RADIUS)
         const yDistance = (y * CIRCLE_RADIUS * 2 - CIRCLE_RADIUS)
         const positionDistanceSquared = xDistance * xDistance + yDistance * yDistance
-        result.sum += (positionDistanceSquared < CIRCLE_RADIUS_SQUARED ? 1 : 0)
+        if (positionDistanceSquared < CIRCLE_RADIUS_SQUARED) {
+          result.sum += 1
+        } else {
+          result.sumOfInverse += 1
+        }
         result.count += 1
       }
       return result
-    }, { sum: 0, count: 0 })
+    }, { sum: 0, count: 0, sumOfInverse: 0 })
 
-    const montecarloPiEstimation = 4 * (montecarloResults.sum / montecarloResults.count)
-    const error = (montecarloPiEstimation - Math.PI) / Math.PI
+    const estimatedPi = 4 * montecarloResults.sum / montecarloResults.count
+    const clamp = (value, min, max) => Math.max(Math.min(value, max), min)
+    const error = clamp(Math.pow((estimatedPi - Math.PI) / 0.1, 2), 0, 1)
 
     return {
       name: this.constructor.name,
       message: 'It\'s assumed a random uniform number generator provides a good estimation of PI using the montecarlo method for a large number of values',
       enginePi: Math.PI,
-      estimatedPi: montecarloPiEstimation,
-      isRandomProbability: 1 - error * error // The error of estimation squared
+      estimatedPi: estimatedPi,
+      isRandomProbability: 1 - error
     }
   }
 }
 
 /*
- * An uniform PRNG should provide an average value of (MIN_VALUE + MAX_VALUE) / 2
+ * An uniform PRNG should provide an average value of (MIN_VALUE + MAX_VALUE) / 2. We add a variance factor to account for generators that don't have a big range.
  *
  * From the ENT man page:
  *  This is simply the result of summing the all the bytes (bits if the -b option is specified) in the file and dividing by the file length.
@@ -69,14 +74,16 @@ class ENTMontecarloTest extends TestSuite.Test {
 class ENTAverageTest extends TestSuite.Test {
   run () {
     const average = this.values.reduce((a, e) => a + e, 0) / this.values.length
+    const variance = this.values.reduce((a, e) => a + (e - average) * (e - average), 0) / this.values.length
     const expectedAverage = 0.5
-    const error = (average - expectedAverage) / expectedAverage
+    const error = (variance === 0 ? 1 : (average - expectedAverage) / expectedAverage)
 
     return {
       name: this.constructor.name,
       message: 'An uniform PRNG should provide an average value of (MIN_VALUE + MAX_VALUE) / 2',
       expectedAverage: expectedAverage,
       actualAverage: average,
+      variance: variance,
       isRandomProbability: 1 - error * error // The error of estimation squared
     }
   }
@@ -119,6 +126,7 @@ class ENTSerialCorrelationTest extends TestSuite.Test {
       message: 'An uniform PRNG should have very low autocorrelation/serial correlation',
       autocorrelation: autocorrelation,
       expectedAverage: 0.0,
+      variance: variance,
       isRandomProbability: 1 - autocorrelation * autocorrelation // The error of estimation squared (error to 0, therefore (0 - autocorrelation)^2 = autocorrelation^2)
     }
   }
