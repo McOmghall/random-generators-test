@@ -25,16 +25,20 @@ class TestSuite {
 
     this.generator = generator
     this.test = new Test(this)
+    this.averageSummary = new AverageSummary(this)
     this.tests = [this.test]
+    this.summaries = [this.averageSummary]
   }
 
   run () {
-    return this.tests.map(function (test) { return ({ [test.constructor.name]: test.run() }) })
+    const allTestResults = this.tests.map(function (test) { return test.run() })
+    return allTestResults.concat(this.summaries.map(function (test) { return test.run(allTestResults) }))
   }
 }
 
 class Test {
   constructor (suite) {
+    this.suite = suite
     this.values = suite.values
   }
 
@@ -42,12 +46,23 @@ class Test {
     // Intentionally left blank
     // Every test returns a report object
     return {
+      name: this.constructor.name,
       message: 'This test is a placeholder to exemplify tests, therefore is not random',
       isRandomProbability: 0.0
     }
   }
 }
 
+class AverageSummary extends Test {
+  run (testResults) {
+    return {
+      name: this.constructor.name,
+      isRandomProbability: testResults.reduce((a, e) => a + e.isRandomProbability, 0) / testResults.length
+    }
+  }
+}
+
 TestSuite.Test = Test
+TestSuite.AverageSummary = AverageSummary
 
 module.exports = TestSuite

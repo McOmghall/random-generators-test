@@ -11,6 +11,6 @@ describe('Test for generic test suite', function () {
   it('should run multiple tests', function () {
     const testResults = testSuite.run()
     console.log('Test results %j', testResults)
-    assert.equal(testResults.length, 1)
+    assert.equal(testResults.length, testSuite.tests.length + testSuite.summaries.length)
   })
 })

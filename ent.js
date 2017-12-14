@@ -45,6 +45,7 @@ class ENTMontecarloTest extends TestSuite.Test {
     const montecarloPiEstimation = 4 * (montecarloResults.sum / montecarloResults.count)
 
     return {
+      name: this.constructor.name,
       message: 'It\'s assumed a random uniform number generator provides a good estimation of PI using the montecarlo method for a large number of values',
       enginePi: Math.PI,
       estimatedPi: montecarloPiEstimation,
@@ -74,6 +75,7 @@ class ENTAverageTest extends TestSuite.Test {
     const average = dataForAverage.sum / dataForAverage.count
 
     return {
+      name: this.constructor.name,
       message: 'An uniform PRNG should provide an average value of (MIN_VALUE + MAX_VALUE) / 2',
       expectedAverage: 0.5,
       actualAverage: average,
