@@ -46,13 +46,14 @@ class ENTMontecarloTest extends TestSuite.Test {
     }, { sum: 0, count: 0 })
 
     const montecarloPiEstimation = 4 * (montecarloResults.sum / montecarloResults.count)
+    const error = (montecarloPiEstimation - Math.PI) / Math.PI
 
     return {
       name: this.constructor.name,
       message: 'It\'s assumed a random uniform number generator provides a good estimation of PI using the montecarlo method for a large number of values',
       enginePi: Math.PI,
       estimatedPi: montecarloPiEstimation,
-      isRandomProbability: 1 - (Math.PI - montecarloPiEstimation) * (Math.PI - montecarloPiEstimation) // The error of estimation squared
+      isRandomProbability: 1 - error * error // The error of estimation squared
     }
   }
 }
@@ -68,13 +69,15 @@ class ENTMontecarloTest extends TestSuite.Test {
 class ENTAverageTest extends TestSuite.Test {
   run () {
     const average = this.values.reduce((a, e) => a + e, 0) / this.values.length
+    const expectedAverage = 0.5
+    const error = (average - expectedAverage) / expectedAverage
 
     return {
       name: this.constructor.name,
       message: 'An uniform PRNG should provide an average value of (MIN_VALUE + MAX_VALUE) / 2',
-      expectedAverage: 0.5,
+      expectedAverage: expectedAverage,
       actualAverage: average,
-      isRandomProbability: 1 - (0.5 - average) * (0.5 - average) // The error of estimation squared
+      isRandomProbability: 1 - error * error // The error of estimation squared
     }
   }
 }
@@ -101,17 +104,22 @@ class ENTSerialCorrelationTest extends TestSuite.Test {
     const paddingSize = powerOf2BiggerThanDataset - size
     const average = this.values.reduce((a, e) => a + e, 0) / powerOf2BiggerThanDataset
     const paddedCenteredSygnal = this.values.map((e) => e - average).concat(new Array(paddingSize).fill(0))
-
     const phasors = fft(paddedCenteredSygnal)
     const powerSpectralDensity = phasors.map((e) => [e[0] * e[0] + e[1] * e[1], 0])
-    const averageAutocovariance = ifft(powerSpectralDensity).reduce((a, e) => a + e[0], 0) / paddedCenteredSygnal.length
+    const autocovariances = ifft(powerSpectralDensity).map((e) => e[0])
+    const variance = autocovariances[0]
+
+    var autocorrelation = 1
+    if (variance !== 0) {
+      autocorrelation = (autocovariances.reduce((a, e) => a + e, 0) / autocovariances.length) / variance
+    }
 
     return {
       name: this.constructor.name,
       message: 'An uniform PRNG should have very low autocorrelation/serial correlation',
-      autocovariance: averageAutocovariance,
+      autocorrelation: autocorrelation,
       expectedAverage: 0.0,
-      isRandomProbability: 1 - averageAutocovariance * averageAutocovariance // The error of estimation squared (error to 0, therefore (-averageAutocovariance)^2 = averageAutocovariance^2)
+      isRandomProbability: 1 - autocorrelation * autocorrelation // The error of estimation squared (error to 0, therefore (0 - autocorrelation)^2 = autocorrelation^2)
     }
   }
 }
