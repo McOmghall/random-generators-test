@@ -3,13 +3,13 @@
 class TestSuite {
   constructor (generator, options) {
     const typeError = new TypeError('A passed random number generator must have a .next() function (or a provided options.next as 2nd argument) that returns a value in [0.0f, 1.0f)')
-    const localOptions = options || {}
-    this.nextFunction = generator.next || localOptions.next
+    this.options = options || {}
+    this.nextFunction = generator.next || this.options.next
     this.values = []
 
-    // Generate 10 GB of values before testing
+    // Generate 2^20 values before testing
     // Javascript number format is a double-precision 64-bit floating point format (IEEE 754)
-    const GENERATE_VALUES_COUNT_PRE_TESTS = localOptions.generateValuesCountPreTests || Math.ceil(10 * 8000000 / 64)
+    const GENERATE_VALUES_COUNT_PRE_TESTS = this.options.generateValuesCountPreTests || Math.pow(2, 20)
 
     if (typeof this.nextFunction !== 'function') {
       throw typeError

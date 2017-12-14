@@ -1,9 +1,11 @@
-/* The ENT test suite (reference https://github.com/jj1bdx/ent)
+/* The ENT test suite (references: https://github.com/jj1bdx/ent, http://fourmilab.ch/random/)
  * Every test returns a value between 0.0f and 1.0f to represent likelihood of randomness according to the test's assumptions
  * Local assumptions are explained for every test
  * The tests are remodelled to float values in the [0, 1) range, the output of Math.random()
 */
 const TestSuite = require('./test_suite')
+const fft = require('fft-js').fft
+const ifft = require('fft-js').ifft
 const CIRCLE_RADIUS = 1.0
 const CIRCLE_RADIUS_SQUARED = CIRCLE_RADIUS * CIRCLE_RADIUS
 
@@ -12,6 +14,7 @@ class ENTSuite extends TestSuite {
     super(generator, options)
     this.monteCarlo = new ENTMontecarloTest(this)
     this.average = new ENTAverageTest(this)
+    this.serialCorrelation = new ENTSerialCorrelationTest(this)
     this.tests = [this.monteCarlo, this.average]
   }
 }
@@ -63,16 +66,8 @@ class ENTMontecarloTest extends TestSuite.Test {
  *  If the mean departs from this value, the values are consistently high or low.
 */
 class ENTAverageTest extends TestSuite.Test {
-  // Try to calculate PI
   run () {
-    const dataForAverage = this.values
-      .reduce((result, value) => {
-        result.sum += value
-        result.count += 1
-        return result
-      }, { sum: 0, count: 0 })
-
-    const average = dataForAverage.sum / dataForAverage.count
+    const average = this.values.reduce((a, e) => a + e, 0) / this.values.length
 
     return {
       name: this.constructor.name,
@@ -80,6 +75,43 @@ class ENTAverageTest extends TestSuite.Test {
       expectedAverage: 0.5,
       actualAverage: average,
       isRandomProbability: 1 - (0.5 - average) * (0.5 - average) // The error of estimation squared
+    }
+  }
+}
+
+/*
+ * An uniform PRNG should have very low autocorrelation/serial correlation (reference: http://paulbourke.net/miscellaneous/correlate/, http://www.tibonihoo.net/literate_musing/autocorrelations.html).
+ * Uses the Fast Fourier Transform to compute the autocorrelation.
+ *
+ * From the ENT man page:
+ *  This quantity measures the extent to which each byte in the file depends upon the previous byte.
+ *  For random sequences, this value (which can be positive or negative) will, of course, be close to zero.
+ *  A non-random byte stream such as a C program will yield a serial correlation coefficient on the order of 0.5.
+ *  Wildly predictable data such as uncompressed bitmaps will exhibit serial correlation coefficients approaching 1. See [Knuth, pp. 64–65] for more details.
+*/
+class ENTSerialCorrelationTest extends TestSuite.Test {
+  run () {
+    const size = this.values.length
+
+    var powerOf2BiggerThanDataset = 2
+    do {
+      powerOf2BiggerThanDataset *= 2
+    } while (powerOf2BiggerThanDataset < size)
+
+    const paddingSize = powerOf2BiggerThanDataset - size
+    const average = this.values.reduce((a, e) => a + e, 0) / powerOf2BiggerThanDataset
+    const paddedCenteredSygnal = this.values.map((e) => e - average).concat(new Array(paddingSize).fill(0))
+
+    const phasors = fft(paddedCenteredSygnal)
+    const powerSpectralDensity = phasors.map((e) => [e[0] * e[0] + e[1] * e[1], 0])
+    const averageAutocovariance = ifft(powerSpectralDensity).reduce((a, e) => a + e[0], 0) / paddedCenteredSygnal.length
+
+    return {
+      name: this.constructor.name,
+      message: 'An uniform PRNG should have very low autocorrelation/serial correlation',
+      autocovariance: averageAutocovariance,
+      expectedAverage: 0.0,
+      isRandomProbability: 1 - averageAutocovariance * averageAutocovariance // The error of estimation squared (error to 0, therefore (-averageAutocovariance)^2 = averageAutocovariance^2)
     }
   }
 }

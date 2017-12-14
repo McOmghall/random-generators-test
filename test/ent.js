@@ -22,4 +22,11 @@ describe('Test for ENT test suite', function () {
     console.log('Test results %j', testResults)
     assert.ok(testResults.isRandomProbability >= 0.99)
   })
+
+  it('should have very low autocorrelation/serial correlation', function () {
+    this.timeout(100000)
+    const testResults = testSuite.serialCorrelation.run()
+    console.log('Test results %j', testResults)
+    assert.ok(testResults.isRandomProbability >= 0.99)
+  })
 })
