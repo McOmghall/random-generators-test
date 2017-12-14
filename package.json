@@ -1,6 +1,6 @@
 {
   "name": "random-generators-test",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Perform statistical tests of randomness over random number generators",
   "main": "index.js",
   "scripts": {
