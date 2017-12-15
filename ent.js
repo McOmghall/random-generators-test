@@ -15,7 +15,8 @@ class ENTSuite extends TestSuite {
     this.monteCarlo = new ENTMontecarloTest(this)
     this.average = new ENTAverageTest(this)
     this.serialCorrelation = new ENTSerialCorrelationTest(this)
-    this.tests = [this.monteCarlo, this.average, this.serialCorrelation]
+    this.entropy = new ENTEntropyTest(this)
+    this.tests = [this.monteCarlo, this.average, this.serialCorrelation, this.entropy]
   }
 }
 
@@ -90,6 +91,49 @@ class ENTAverageTest extends TestSuite.Test {
 }
 
 /*
+ * An uniform PRNG should show very high entropy (meaning it has a very high information content - that is, any part of it can't be deducted from the rest).
+ * We use a traditional entropy definition (Shannon's): Entropy = -sum_FOR_EACH_i(p(i) * log2(p(i))) where p(i) are the probabilities of every i (or every element extracted from the generator).
+ * The probabilities are estimated just by counting.
+ *
+ * From the ENT man page:
+ *  The information density of the contents of the file, expressed as a number of bits per character.
+ *  The results above, which resulted from processing an image file compressed with JPEG, indicate that the file is extremely dense in information—essentially random.
+ *  Hence, compression of the file is unlikely to reduce its size. By contrast, the C source code of the program has entropy of about 4.9 bits per character, indicating that optimal compression of the file would reduce its size by 38%. [Hamming, pp. 104–108]
+*/
+class ENTEntropyTest extends TestSuite.Test {
+  run () {
+    const probabilityBuckets = this.values.reduce((a, e) => {
+      a[e.toString()] = (a[e.toString()] || 0) + 1
+      return a
+    }, {})
+
+    var entropy = 0
+    var entropyOfIdealSystem = 0
+    const numberOfBuckets = Object.keys(probabilityBuckets).length
+    for (let i in probabilityBuckets) {
+      if (probabilityBuckets.hasOwnProperty(i)) {
+        probabilityBuckets[i] = probabilityBuckets[i] / numberOfBuckets
+        entropy += probabilityBuckets[i] * Math.log(probabilityBuckets[i])
+        entropyOfIdealSystem += (1 / numberOfBuckets) * Math.log(1 / numberOfBuckets)
+      }
+    }
+    entropy = -entropy
+    entropyOfIdealSystem = -entropyOfIdealSystem
+    const clamp = (value, min, max) => Math.max(Math.min(value, max), min)
+    const error = clamp(Math.pow((entropy - entropyOfIdealSystem) / entropyOfIdealSystem, 2), 0, 1)
+
+    return {
+      name: this.constructor.name,
+      message: 'An uniform PRNG should show very high entropy (meaning it has a very high information content - that is, any part of it can\'t be deducted from the rest)',
+      entropy: entropy,
+      entropyOfIdealSystem: entropyOfIdealSystem,
+      buckets: Object.keys(probabilityBuckets).length,
+      isRandomProbability: 1 - error
+    }
+  }
+}
+
+/*
  * An uniform PRNG should have very low autocorrelation/serial correlation (reference: http://paulbourke.net/miscellaneous/correlate/, http://www.tibonihoo.net/literate_musing/autocorrelations.html).
  * Uses the Fast Fourier Transform to compute the autocorrelation.
  *
@@ -125,7 +169,7 @@ class ENTSerialCorrelationTest extends TestSuite.Test {
       name: this.constructor.name,
       message: 'An uniform PRNG should have very low autocorrelation/serial correlation',
       autocorrelation: autocorrelation,
-      expectedAverage: 0.0,
+      expectedAutocorrelation: 0.0,
       variance: variance,
       isRandomProbability: 1 - autocorrelation * autocorrelation // The error of estimation squared (error to 0, therefore (0 - autocorrelation)^2 = autocorrelation^2)
     }

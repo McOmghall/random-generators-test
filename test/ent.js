@@ -1,92 +1,44 @@
-const assert = require('assert')
+const expect = require('chai').expect
 const ENTSuite = require('../ent')
 
 describe('Test for ENT test suite', function () {
-  describe('Positive tests Math.random()', function () {
-    const testSuite = new ENTSuite(Math.random, { next: () => Math.random() })
-    it('should say that node Math.random is a good generator', function () {
-      this.timeout(100000)
-      const testResults = testSuite.run()
-      console.log('Test results %j', testResults)
-      const averageSummaryIndex = testResults.findIndex((e) => e.name === ENTSuite.AverageSummary.name)
-      assert.ok(testResults[averageSummaryIndex].isRandomProbability >= 0.99)
-    })
+  const tests = [{
+    name: 'Math.random()',
+    generator: Math.random,
+    options: { next: () => Math.random() },
+    expectedIsRandomValue: (value) => expect(value).to.be.above(0.99).and.below(1.01)
+  }, {
+    name: 'Constant 0.99999',
+    generator: Math.random,
+    options: { next: () => 0.99999 },
+    expectedIsRandomValue: (value) => expect(value).to.be.below(0.01).and.at.least(0)
+  }, {
+    name: 'Constant 0.5',
+    generator: Math.random,
+    options: { next: () => 0.5 },
+    expectedIsRandomValue: (value) => expect(value).to.be.below(0.01).and.at.least(0)
+  }]
+  for (let i = 0; i < tests.length; i++) {
+    const testInfo = tests[i]
+    describe(`Test ${testInfo.name}`, function () {
+      const testSuite = new ENTSuite(testInfo.generator, testInfo.options)
 
-    it('should return a good montecarlo estimation', function () {
-      const testResults = testSuite.monteCarlo.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability >= 0.99)
-    })
+      it(`should report correctly on ${testInfo.name}`, function () {
+        this.timeout(100000)
+        const testResults = testSuite.run()
+        console.log('Test results %j', testResults)
+        const averageSummaryIndex = testResults.findIndex((e) => e.name === ENTSuite.AverageSummary.name)
+        testInfo.expectedIsRandomValue(testResults[averageSummaryIndex].isRandomProbability)
+      })
 
-    it('should generate an average of 0.5', function () {
-      const testResults = testSuite.average.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability >= 0.99)
+      for (let j = 0; j < testSuite.tests.length; j++) {
+        it(`should test using the ${testSuite.tests[j].constructor.name} method`, function () {
+          this.timeout(30000)
+          const testResults = testSuite.tests[j].run()
+          console.log('Test results %j', testResults)
+          testInfo.expectedIsRandomValue(testResults.isRandomProbability)
+        })
+      }
     })
-
-    it('should have very low autocorrelation/serial correlation', function () {
-      this.timeout(100000)
-      const testResults = testSuite.serialCorrelation.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability >= 0.99)
-    })
-  })
-  describe('Negative tests for Constant', function () {
-    const testSuite = new ENTSuite(Math.random, { next: () => 0.999999 })
-    it('should say that a constant is not a good generator', function () {
-      this.timeout(100000)
-      const testResults = testSuite.run()
-      console.log('Test results %j', testResults)
-      const averageSummaryIndex = testResults.findIndex((e) => e.name === ENTSuite.AverageSummary.name)
-      assert.ok(testResults[averageSummaryIndex].isRandomProbability <= 0.01)
-    })
-
-    it('should return a bad montecarlo estimation', function () {
-      const testResults = testSuite.monteCarlo.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability <= 0.01)
-    })
-
-    it('should not generate an average of 0.5', function () {
-      const testResults = testSuite.average.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability <= 0.01)
-    })
-
-    it('should have very low autocorrelation/serial correlation', function () {
-      this.timeout(100000)
-      const testResults = testSuite.serialCorrelation.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability <= 0.01)
-    })
-  })
-  describe('Negative tests for Constant that challenges the average test', function () {
-    const testSuite = new ENTSuite(Math.random, { next: () => 0.5 })
-    it('should say that a constant is not a good generator', function () {
-      this.timeout(100000)
-      const testResults = testSuite.run()
-      console.log('Test results %j', testResults)
-      const averageSummaryIndex = testResults.findIndex((e) => e.name === ENTSuite.AverageSummary.name)
-      assert.ok(testResults[averageSummaryIndex].isRandomProbability <= 0.01)
-    })
-
-    it('should return a bad montecarlo estimation', function () {
-      const testResults = testSuite.monteCarlo.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability <= 0.01)
-    })
-
-    it('should not generate an average of 0.5', function () {
-      const testResults = testSuite.average.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability <= 0.01)
-    })
-
-    it('should have very low autocorrelation/serial correlation', function () {
-      this.timeout(100000)
-      const testResults = testSuite.serialCorrelation.run()
-      console.log('Test results %j', testResults)
-      assert.ok(testResults.isRandomProbability <= 0.01)
-    })
-  })
+  }
 })
