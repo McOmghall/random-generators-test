@@ -7,20 +7,19 @@ const CIRCLE_RADIUS_SQUARED = CIRCLE_RADIUS * CIRCLE_RADIUS
 /* The ENT test suite (references: https://github.com/jj1bdx/ent, http://fourmilab.ch/random/)
  * Every test returns a value between 0.0f and 1.0f to represent likelihood of randomness according to the test's assumptions
  * Local assumptions are explained for every test
- * The tests are remodelled to float values in the [0, 1) range, the output of Math.random()
+ * The tests are remodelled to give an isRandomProbability float value in the [0, 1) range, representing the probability the generator is random according to the test.
 */
 class ENTSuite extends TestSuite {
   constructor (generator, options) {
-    super(generator, options)
-    this.testConstructors = {
+    options = options || {}
+    options.testConstructors = {
       MontecarloTest: ENTMontecarloTest,
       AverageTest: ENTAverageTest,
       SerialCorrelationTest: ENTSerialCorrelationTest,
       EntropyTest: ENTEntropyTest,
       ChiSquaredTest: ENTChiSquaredTest
     }
-
-    this.tests = Object.keys(this.testConstructors).map((e) => new this.testConstructors[e](this))
+    super(generator, options)
   }
 }
 

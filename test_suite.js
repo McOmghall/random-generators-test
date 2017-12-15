@@ -1,33 +1,33 @@
 // The baseline for every test suite on this module
 
+const testTypeError = new TypeError('A passed random number generator must have a .next() function (or a provided options.next as 2nd argument) that returns a value in [0.0f, 1.0f)')
 class TestSuite {
   constructor (generator, options) {
-    const typeError = new TypeError('A passed random number generator must have a .next() function (or a provided options.next as 2nd argument) that returns a value in [0.0f, 1.0f)')
     this.options = options || {}
     this.nextFunction = generator.next || this.options.next
     this.values = []
 
+    this.generator = generator
+    this.testConstructors = this.options.testConstructors || { Test: Test }
+    this.summaryConstructors = this.options.summaryConstructors || { AverageSummary: AverageSummary }
+
+    if (typeof this.nextFunction !== 'function') throw testTypeError
+
     // Generate 2^20 values before testing
     // Javascript number format is a double-precision 64-bit floating point format (IEEE 754)
-    const GENERATE_VALUES_COUNT_PRE_TESTS = this.options.generateValuesCountPreTests || Math.pow(2, 20)
+    const valueCount = this.options.generateValuesCountPreTests || Math.pow(2, 20)
+    this.generateValues(valueCount)
+    this.tests = Object.keys(this.testConstructors).map((e) => new this.testConstructors[e](this))
+    this.summaries = Object.keys(this.summaryConstructors).map((e) => new this.summaryConstructors[e](this))
+  }
 
-    if (typeof this.nextFunction !== 'function') {
-      throw typeError
-    }
-
-    for (var i = 0; i < GENERATE_VALUES_COUNT_PRE_TESTS; i++) {
+  generateValues (valueCount) {
+    for (var i = 0; i < valueCount; i++) {
       let value = this.nextFunction()
-      if ((typeof value !== 'number') || value >= 1.0 || value < 0.0) {
-        throw typeError
-      }
+      if ((typeof value !== 'number') || value >= 1.0 || value < 0.0) throw testTypeError
       this.values.push(value)
     }
-
-    this.generator = generator
-    this.test = new Test(this)
-    this.averageSummary = new AverageSummary(this)
-    this.tests = [this.test]
-    this.summaries = [this.averageSummary]
+    return this
   }
 
   run () {

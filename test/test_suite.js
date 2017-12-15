@@ -4,7 +4,7 @@ const TestSuite = require('../test_suite')
 describe('Test for generic test suite', function () {
   const testSuite = new TestSuite(Math.random, { next: () => Math.random() })
   it('should have a generic placeholder test', function () {
-    const testResults = testSuite.test.run()
+    const testResults = new testSuite.testConstructors.Test(testSuite).run()
     console.log('Test results %j', testResults)
     assert.equal(testResults.isRandomProbability, 0)
   })
