@@ -28,6 +28,11 @@ class ENTSuite extends TestSuite {
  * Aux functions for tests
 */
 const clamp = (value, min, max) => Math.max(Math.min(value, max), min)
+const averagef = (values) => values.reduce((a, e) => a + e, 0) / values.length
+const variancef = (values, suppliedAverage) => {
+  const average = suppliedAverage || averagef(values)
+  return values.reduce((a, e) => a + (e - average) * (e - average), 0) / values.length
+}
 
 /*
  * It's assumed an uniform PRNG provides a good estimation for PI using the montecarlo method for a large number of values
@@ -82,8 +87,8 @@ class ENTMontecarloTest extends TestSuite.Test {
 */
 class ENTAverageTest extends TestSuite.Test {
   run () {
-    const average = this.values.reduce((a, e) => a + e, 0) / this.values.length
-    const variance = this.values.reduce((a, e) => a + (e - average) * (e - average), 0) / this.values.length
+    const average = averagef(this.values)
+    const variance = variancef(this.values, average)
     const expectedAverage = 0.5
     const error = (variance === 0 ? 1 : (average - expectedAverage) / expectedAverage)
 

@@ -33,7 +33,7 @@ describe('Test for ENT test suite', function () {
 
       for (let j = 0; j < testSuite.tests.length; j++) {
         it(`should test using the ${testSuite.tests[j].constructor.name} method`, function () {
-          this.timeout(30000)
+          this.timeout(50000)
           const testResults = testSuite.tests[j].run()
           console.log('Test results %j', testResults)
           testInfo.expectedIsRandomValue(testResults.isRandomProbability)
