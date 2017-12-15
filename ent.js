@@ -12,13 +12,22 @@ const CIRCLE_RADIUS_SQUARED = CIRCLE_RADIUS * CIRCLE_RADIUS
 class ENTSuite extends TestSuite {
   constructor (generator, options) {
     super(generator, options)
-    this.monteCarlo = new ENTMontecarloTest(this)
-    this.average = new ENTAverageTest(this)
-    this.serialCorrelation = new ENTSerialCorrelationTest(this)
-    this.entropy = new ENTEntropyTest(this)
-    this.tests = [this.monteCarlo, this.average, this.serialCorrelation, this.entropy]
+    this.testConstructors = {
+      MontecarloTest: ENTMontecarloTest,
+      AverageTest: ENTAverageTest,
+      SerialCorrelationTest: ENTSerialCorrelationTest,
+      EntropyTest: ENTEntropyTest,
+      ChiSquaredTest: ENTChiSquaredTest
+    }
+
+    this.tests = Object.keys(this.testConstructors).map((e) => new this.testConstructors[e](this))
   }
 }
+
+/*
+ * Aux functions for tests
+*/
+const clamp = (value, min, max) => Math.max(Math.min(value, max), min)
 
 /*
  * It's assumed an uniform PRNG provides a good estimation for PI using the montecarlo method for a large number of values
@@ -51,7 +60,6 @@ class ENTMontecarloTest extends TestSuite.Test {
     }, { sum: 0, count: 0, sumOfInverse: 0 })
 
     const estimatedPi = 4 * montecarloResults.sum / montecarloResults.count
-    const clamp = (value, min, max) => Math.max(Math.min(value, max), min)
     const error = clamp(Math.pow((estimatedPi - Math.PI) / 0.1, 2), 0, 1)
 
     return {
@@ -119,7 +127,6 @@ class ENTEntropyTest extends TestSuite.Test {
     }
     entropy = -entropy
     entropyOfIdealSystem = -entropyOfIdealSystem
-    const clamp = (value, min, max) => Math.max(Math.min(value, max), min)
     const error = clamp(Math.pow((entropy - entropyOfIdealSystem) / entropyOfIdealSystem, 2), 0, 1)
 
     return {
@@ -172,6 +179,48 @@ class ENTSerialCorrelationTest extends TestSuite.Test {
       expectedAutocorrelation: 0.0,
       variance: variance,
       isRandomProbability: 1 - autocorrelation * autocorrelation // The error of estimation squared (error to 0, therefore (0 - autocorrelation)^2 = autocorrelation^2)
+    }
+  }
+}
+
+/*
+ * An uniform PRNG should have a very low value on the Chi Squared test.
+ *
+ * From the ENT man page:
+ *  The chi-square test is the most commonly used test for the randomness of data, and is extremely sensitive to errors in pseudorandom sequence generators.
+ *  The chi-square distribution is calculated for the stream of bytes in the file and expressed as an absolute number and a percentage which indicates
+ *  how frequently a truly random sequence would exceed the value calculated. We interpret the percentage as the degree to which the sequence tested is suspected of being non-random.
+ *  If the percentage is greater than 99% or less than 1%, the sequence is almost certainly not random.
+ *  If the percentage is between 99% and 95% or between 1% and 5%, the sequence is suspect.
+ *  Percentages between 90% and 95% and 5% and 10% indicate the sequence is “almost suspect”.
+ *  Note that our JPEG file, while very dense in information, is far from random as revealed by the chi-square test.
+*/
+class ENTChiSquaredTest extends TestSuite.Test {
+  run () {
+    const probabilityBuckets = this.values.reduce((a, e) => {
+      a[e.toString()] = (a[e.toString()] || {})
+      a[e.toString()].count = (a[e.toString()].count || 0) + 1
+      return a
+    }, {})
+
+    var chisquared = 0
+    const numberOfBuckets = Object.keys(probabilityBuckets).length
+    for (let i in probabilityBuckets) {
+      if (probabilityBuckets.hasOwnProperty(i)) {
+        probabilityBuckets[i].probability = probabilityBuckets[i].count / numberOfBuckets
+        probabilityBuckets[i].expected = 1 / numberOfBuckets
+        probabilityBuckets[i].chisquaredterm = Math.pow(probabilityBuckets[i].probability - probabilityBuckets[i].expected, 2) / probabilityBuckets[i].expected
+        chisquared += probabilityBuckets[i].chisquaredterm
+      }
+    }
+    const expectedChisquared = 0
+
+    return {
+      name: this.constructor.name,
+      message: 'An uniform PRNG should have a very low value on the Chi Squared test',
+      chisquared: chisquared,
+      expectedChisquared: expectedChisquared,
+      isRandomProbability: 1 - clamp(Math.pow(chisquared - expectedChisquared, 2), 0, 1) // The error of estimation squared (error to 0, therefore (0 - autocorrelation)^2 = autocorrelation^2)
     }
   }
 }
