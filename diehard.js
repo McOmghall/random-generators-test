@@ -6,9 +6,11 @@ const TestSuite = require('./test_suite')
  * The tests are remodelled to give an isRandomProbability float value in the [0, 1) range, representing the probability the generator is random according to the test.
 */
 class DiehardSuite extends TestSuite {
-  constructor(generator, options) {
+  constructor (generator, options) {
     options = options || {}
     options.testConstructors = {}
     super(generator, options)
   }
 }
+
+module.exports = DiehardSuite
