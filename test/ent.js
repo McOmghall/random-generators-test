@@ -1,5 +1,7 @@
 const expect = require('chai').expect
 const ENTSuite = require('../ent')
+const describe = require('mocha').describe
+const it = require('mocha').it
 
 describe('Test for ENT test suite', function () {
   const tests = [{

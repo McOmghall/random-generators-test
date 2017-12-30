@@ -1,5 +1,7 @@
 const assert = require('assert')
 const TestSuite = require('../test_suite')
+const describe = require('mocha').describe
+const it = require('mocha').it
 
 describe('Test for generic test suite', function () {
   const testSuite = new TestSuite(Math.random, { next: () => Math.random() })
