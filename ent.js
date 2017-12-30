@@ -188,7 +188,7 @@ class ENTSerialCorrelationTest extends TestSuite.Test {
 }
 
 /*
- * An uniform PRNG should have a very low value on the Chi Squared test.
+ * An uniform PRNG should have a very low value on the Chi Squared test against a uniform distribution.
  *
  * From the ENT man page:
  *  The chi-square test is the most commonly used test for the randomness of data, and is extremely sensitive to errors in pseudorandom sequence generators.
@@ -221,7 +221,7 @@ class ENTChiSquaredTest extends TestSuite.Test {
 
     return {
       name: this.constructor.name,
-      message: 'An uniform PRNG should have a very low value on the Chi Squared test',
+      message: 'An uniform PRNG should have a very low value on the Chi Squared test against a uniform distribution',
       chisquared: chisquared,
       expectedChisquared: expectedChisquared,
       isRandomProbability: 1 - clamp(Math.pow(chisquared - expectedChisquared, 2), 0, 1) // The error of estimation squared (error to 0, therefore (0 - autocorrelation)^2 = autocorrelation^2)
